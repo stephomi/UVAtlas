@@ -72,13 +72,12 @@
 #include <Windows.h>
 #include <objbase.h>
 
-#ifdef __MINGW32__
+#if defined(__MINGW32) && 0
 #include <unknwn.h>
 #endif
 
-#else // !WIN32
-#include <wsl/winadapter.h>
-#include <directx/d3d12.h>
+#else
+#include <JntLinuxTypes.h>
 #endif
 
 #define _USE_MATH_DEFINES
@@ -128,7 +127,9 @@
 
 #define _XM_NO_XMVECTOR_OVERLOADS_
 
+#if defined(_WIN32) && 0
 #include <DirectXMath.h>
+#endif
 
 #include "UVAtlas.h"
 

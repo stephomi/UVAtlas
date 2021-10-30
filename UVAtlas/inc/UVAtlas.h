@@ -9,7 +9,7 @@
 
 #pragma once
 
-#ifdef _WIN32
+#if defined(_WIN32) && 0
 #ifdef _GAMING_XBOX_SCARLETT
 #pragma warning(push)
 #pragma warning(disable : 5204 5249)
@@ -30,9 +30,8 @@
 #include <dxgiformat.h>
 #endif
 #endif
-#else // !WIN32
-#include <directx/dxgiformat.h>
-#include <wsl/winadapter.h>
+#else
+#include <JntLinuxTypes.h>
 #endif
 
 #include <cstddef>
@@ -40,7 +39,9 @@
 #include <functional>
 #include <vector>
 
+#if defined(_WIN32) && 0
 #include <DirectXMath.h>
+#endif
 
 #define UVATLAS_VERSION 192
 
@@ -391,8 +392,10 @@ namespace DirectX
 #pragma clang diagnostic ignored "-Wextra-semi-stmt"
 #endif
 
-    DEFINE_ENUM_FLAG_OPERATORS(UVATLAS_IMT);
-    DEFINE_ENUM_FLAG_OPERATORS(UVATLAS);
+#if 0
+    DEFINE_ENUM_FLAG_OPERATORS(UVATLAS_IMT)
+    DEFINE_ENUM_FLAG_OPERATORS(UVATLAS)
+#endif
 
 #ifdef __clang__
 #pragma clang diagnostic pop
