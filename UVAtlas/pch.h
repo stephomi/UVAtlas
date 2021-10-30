@@ -76,8 +76,9 @@
 #endif
 
 #else // !WIN32
-#include <wsl/winadapter.h>
-#include <directx/d3d12.h>
+// #include <wsl/winadapter.h>
+// #include <directx/d3d12.h>
+#include <JntLinuxTypes.h>
 #endif
 
 #define _USE_MATH_DEFINES
@@ -127,7 +128,9 @@
 
 #define _XM_NO_XMVECTOR_OVERLOADS_
 
+#ifdef _WIN32
 #include <DirectXMath.h>
+#endif
 
 #include "UVAtlas.h"
 

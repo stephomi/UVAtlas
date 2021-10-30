@@ -31,8 +31,9 @@
 #endif
 #endif
 #else // !WIN32
-#include <directx/dxgiformat.h>
-#include <wsl/winadapter.h>
+// #include <directx/dxgiformat.h>
+// #include <wsl/winadapter.h>
+#include <JntLinuxTypes.h>
 #endif
 
 #include <cstddef>
@@ -40,7 +41,9 @@
 #include <functional>
 #include <vector>
 
+#ifdef _WIN32
 #include <DirectXMath.h>
+#endif
 
 #define UVATLAS_VERSION 188
 
@@ -376,8 +379,10 @@ namespace DirectX
 #pragma clang diagnostic ignored "-Wdeprecated-dynamic-exception-spec"
 #endif
 
+#ifdef _WIN32
     DEFINE_ENUM_FLAG_OPERATORS(UVATLAS_IMT);
     DEFINE_ENUM_FLAG_OPERATORS(UVATLAS);
+#endif
 
 #ifdef __clang__
 #pragma clang diagnostic pop
