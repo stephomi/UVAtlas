@@ -167,22 +167,22 @@ namespace GeodesicDist
 #endif
 
         // setting an index also assigns appropriate pointer to the corresponding pointer field 
-        void SetEdgeIdx(TypeEdgeList& EdgeList, const uint32_t index)
+        template<typename T> void SetEdgeIdx(/*TypeEdgeList*/T& EdgeList, const uint32_t index)
         {
             this->dwEdgeIdx = index;
             this->pEdge = &(EdgeList[index]);
         }
-        void SetPseuSrcVertexIdx(TypeVertexList& VertexList, const uint32_t index)
+        template<typename T> void SetPseuSrcVertexIdx(/*TypeVertexList*/T& VertexList, const uint32_t index)
         {
             this->dwPseuSrcVertexIdx = index;
             this->pPseuSrcVertex = (index < VertexList.size()) ? &(VertexList[index]) : nullptr;
         }
-        void SetMarkFromEdgeVertexIdx(TypeVertexList& VertexList, const uint32_t index)
+        template<typename T> void SetMarkFromEdgeVertexIdx(/*TypeVertexList*/T& VertexList, const uint32_t index)
         {
             this->dwMarkFromEdgeVertexIdx = index;
             this->pMarkFromEdgeVertex = &(VertexList[index]);
         }
-        void SetFaceIdxPropagatedFrom(TypeFaceList& FaceList, const uint32_t index)
+        template<typename T> void SetFaceIdxPropagatedFrom(/*TypeFaceList*/T& FaceList, const uint32_t index)
         {
             this->dwFaceIdxPropagatedFrom = index;
             this->pFacePropagatedFrom = &(FaceList[index]);
