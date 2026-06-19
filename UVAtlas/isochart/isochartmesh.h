@@ -728,7 +728,7 @@ namespace Isochart
             size_t dwPrimaryEigenDimension,
             const float *pfVertGeodesicDistance);
 
-        void ClusterFacesByParameterDistance(
+        HRESULT ClusterFacesByParameterDistance(
             uint32_t *pdwFaceChartID,
             const float *pfVertParitionDistance,
             std::vector<uint32_t> &representativeVertsIdx);
@@ -1070,12 +1070,14 @@ namespace Isochart
             size_t dwTotalFaceNumber,
             bool *pbMergeFlag,
             DirectX::XMFLOAT3 *pChartNormal,
+            CCallbackSchemer &callbackSchemer,
             bool &bMerged);
 
         static HRESULT TryMergeChart(
             ISOCHARTMESH_ARRAY &children,
             const CIsochartMesh *pChart1,
             const CIsochartMesh *pChart2,
+            CCallbackSchemer &callbackSchemer,
             CIsochartMesh **ppFinialChart);
 
         static HRESULT CollectSharedVerts(
@@ -1085,10 +1087,12 @@ namespace Isochart
             std::vector<bool> &vertMark,
             VERTEX_ARRAY &sharedVertexList,
             VERTEX_ARRAY &anotherSharedVertexList,
+            CCallbackSchemer &callbackSchemer,
             bool &bCanMerge);
 
         static HRESULT CheckMergingToplogy(
             VERTEX_ARRAY &sharedVertexList,
+            CCallbackSchemer &callbackSchemer,
             bool &bIsManifold);
 
         static CIsochartMesh *MergeTwoCharts(

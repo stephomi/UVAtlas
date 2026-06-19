@@ -17,6 +17,7 @@ using namespace DirectX;
 namespace
 {
     constexpr size_t MAX_FACE_NUMBER = 0xfffffffe;
+    constexpr size_t CALLBACK_CHECK_INTERVAL = 1024;
 };
 
 //-------------------------------------------------------------------------------------
@@ -274,6 +275,7 @@ HRESULT CIsochartMesh::PerformMerging(
                 dwFaceNumber,
                 pbMergeFlag.get(),
                 pChartNormal.get(),
+                callbackSchemer,
                 bMerged)))
         {
             return hr;
@@ -302,6 +304,7 @@ HRESULT CIsochartMesh::MergeAdjacentChart(
     size_t dwTotalFaceNumber,
     bool *pbMergeFlag,
     XMFLOAT3 *pChartNormal,
+    CCallbackSchemer &callbackSchemer,
     bool &bMerged)
 {
     HRESULT hr = S_OK;
@@ -320,6 +323,11 @@ HRESULT CIsochartMesh::MergeAdjacentChart(
     // alwasy try to merge charts having approximate normals firstly
     for (size_t i = 0; i < dwAdjacentChartNumber - 1; i++)
     {
+        if (((i + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+        {
+            FAILURE_RETURN(callbackSchemer.CheckPointAdapt());
+        }
+
         if (!children[adjacentChartList[i]])
         {
             continue;
@@ -357,6 +365,8 @@ HRESULT CIsochartMesh::MergeAdjacentChart(
 
     for (size_t i = 0; i < dwAdjacentChartNumber; i++)
     {
+        FAILURE_RETURN(callbackSchemer.CheckPointAdapt());
+
         uint32_t dwAdjacentChartID = adjacentChartList[i];
 
         // 2.1. Don't try merage this chart, if its has failed to merage other charts
@@ -384,7 +394,7 @@ HRESULT CIsochartMesh::MergeAdjacentChart(
 
         // 2.3.  try to merge.
         FAILURE_RETURN(
-            TryMergeChart(children, pMainChart, pAddjacentChart, &pMergedChart));
+            TryMergeChart(children, pMainChart, pAddjacentChart, callbackSchemer, &pMergedChart));
         if (!pMergedChart)
         {
             continue;
@@ -392,7 +402,19 @@ HRESULT CIsochartMesh::MergeAdjacentChart(
 
         // 2.4 try to get right initial parameterization
         bool bParameterSucceed = false;
+        if (FAILED(hr = callbackSchemer.CheckPointAdapt()))
+        {
+            delete pMergedChart;
+            pMergedChart = nullptr;
+            return hr;
+        }
         if (FAILED(hr = pMergedChart->TryParameterize(bParameterSucceed)))
+        {
+            delete pMergedChart;
+            pMergedChart = nullptr;
+            return hr;
+        }
+        if (FAILED(hr = callbackSchemer.CheckPointAdapt()))
         {
             delete pMergedChart;
             pMergedChart = nullptr;
@@ -407,6 +429,12 @@ HRESULT CIsochartMesh::MergeAdjacentChart(
 
         // 2.5 Check if the meraged chart also satisfied the stretch
         bool bCanMerge = true;
+        if (FAILED(hr = callbackSchemer.CheckPointAdapt()))
+        {
+            delete pMergedChart;
+            pMergedChart = nullptr;
+            return hr;
+        }
         if (FAILED(hr = CheckMergeResult(
             children,
             pMainChart,
@@ -417,6 +445,12 @@ HRESULT CIsochartMesh::MergeAdjacentChart(
             delete pMergedChart;
             pMergedChart = nullptr;
             continue;
+        }
+        if (FAILED(hr = callbackSchemer.CheckPointAdapt()))
+        {
+            delete pMergedChart;
+            pMergedChart = nullptr;
+            return hr;
         }
         if (bCanMerge)
         {
@@ -440,6 +474,15 @@ HRESULT CIsochartMesh::MergeAdjacentChart(
     // 3. Adjust the adjacence of merged charts and other charts
     for (size_t i = 0; i < pMergedChart->m_adjacentChart.size(); i++)
     {
+        if (((i + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+        {
+            if (FAILED(hr = callbackSchemer.CheckPointAdapt()))
+            {
+                delete pMergedChart;
+                return hr;
+            }
+        }
+
         pAddjacentChart = children[pMergedChart->m_adjacentChart[i]];
         if (!pAddjacentChart)
         {
@@ -523,6 +566,11 @@ HRESULT CIsochartMesh::CheckMergeResult(
 
         for (size_t ii = 0; ii < tempChartList.size() && bCanMerge; ++ii)
         {
+            if (((ii + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+            {
+                FAILURE_RETURN(pOldChart1->m_callbackSchemer.CheckPointAdapt());
+            }
+
             float stretch = tempChartList[ii]->m_fParamStretchL2 / tempChartList[ii]->m_fChart2DArea;
             bCanMerge =
                 IsReachExpectedTotalAvgL2SqrStretch(
@@ -622,8 +670,10 @@ HRESULT CIsochartMesh::CollectSharedVerts(
     std::vector<bool> &vertMark,
     VERTEX_ARRAY &sharedVertexList,
     VERTEX_ARRAY &anotherSharedVertexList,
+    CCallbackSchemer &callbackSchemer,
     bool &bCanMerge)
 {
+    HRESULT hr = S_OK;
     bCanMerge = false;
 
     // 1.Find all vertices in chart1 and chart2 that can be connected
@@ -633,6 +683,11 @@ HRESULT CIsochartMesh::CollectSharedVerts(
         size_t dwVertexCount = pChart2->m_dwVertNumber;
         for (size_t i = 0; i < pChart1->m_dwVertNumber; i++)
         {
+            if (((i + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+            {
+                FAILURE_RETURN(callbackSchemer.CheckPointAdapt());
+            }
+
             ISOCHARTVERTEX *pVertex1 = pChart1->m_pVerts + i;
             assert(pVertex1->dwID == i);
             vertMark[pVertex1->dwID] = true;
@@ -646,6 +701,11 @@ HRESULT CIsochartMesh::CollectSharedVerts(
             uint32_t dwSharedVerteIndex = INVALID_INDEX;
             for (uint32_t j = 0; j < pChart2->m_dwVertNumber; j++)
             {
+                if (((j + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+                {
+                    FAILURE_RETURN(callbackSchemer.CheckPointAdapt());
+                }
+
                 ISOCHARTVERTEX *pVertex2 = pChart2->m_pVerts + j;
                 if (!pVertex2->bIsBoundary)
                 {
@@ -697,8 +757,10 @@ HRESULT CIsochartMesh::CollectSharedVerts(
 //-------------------------------------------------------------------------------------
 HRESULT CIsochartMesh::CheckMergingToplogy(
     VERTEX_ARRAY &sharedVertexList,
+    CCallbackSchemer &callbackSchemer,
     bool &bIsManifold)
 {
+    HRESULT hr = S_OK;
     assert(!sharedVertexList.empty());
     bIsManifold = false;
 
@@ -712,6 +774,8 @@ HRESULT CIsochartMesh::CheckMergingToplogy(
 
         while (!checkedVertexList.empty())
         {
+            FAILURE_RETURN(callbackSchemer.CheckPointAdapt());
+
             pVertex1 = checkedVertexList[0];
             checkedVertexList.erase(checkedVertexList.begin());
             for (size_t i = 0; i < pVertex1->vertAdjacent.size(); i++)
@@ -840,6 +904,7 @@ HRESULT CIsochartMesh::TryMergeChart(
     ISOCHARTMESH_ARRAY &children,
     const CIsochartMesh *pChart1,
     const CIsochartMesh *pChart2,
+    CCallbackSchemer &callbackSchemer,
     CIsochartMesh **ppFinialChart)
 {
     assert(pChart1 != nullptr);
@@ -875,6 +940,7 @@ HRESULT CIsochartMesh::TryMergeChart(
             vertMark,
             sharedVertexList,
             anotherSharedVertexList,
+            callbackSchemer,
             bCanMerge));
     if (!bCanMerge)
     {
@@ -890,13 +956,13 @@ HRESULT CIsochartMesh::TryMergeChart(
     // 2. Check if merge two sub-charts can generate following non-manifold chart.
     bool bIsManifold = false;
     FAILURE_RETURN(
-        CheckMergingToplogy(sharedVertexList, bIsManifold));
+        CheckMergingToplogy(sharedVertexList, callbackSchemer, bIsManifold));
     if (!bIsManifold)
     {
         return hr;
     }
     FAILURE_RETURN(
-        CheckMergingToplogy(anotherSharedVertexList, bIsManifold));
+        CheckMergingToplogy(anotherSharedVertexList, callbackSchemer, bIsManifold));
     if (!bIsManifold)
     {
         return hr;
@@ -916,6 +982,11 @@ HRESULT CIsochartMesh::TryMergeChart(
 
     // 4. Build full connection to check if new sub-chart is manifold
     bool bManifold = false;
+    if (FAILED(hr = callbackSchemer.CheckPointAdapt()))
+    {
+        delete pMainChart;
+        return hr;
+    }
     hr = pMainChart->BuildFullConnection(bManifold);
     if (FAILED(hr) || !bManifold)
     {
@@ -928,6 +999,12 @@ HRESULT CIsochartMesh::TryMergeChart(
     bool bSimpleChart = 0;
     do
     {
+        if (FAILED(hr = callbackSchemer.CheckPointAdapt()))
+        {
+            delete pMainChart;
+            return hr;
+        }
+
         hr = pMainChart->PrepareSimpleChart(true, dwBoundaryNumber, bSimpleChart);
         if (FAILED(hr) || dwBoundaryNumber == 0 || pMainChart->m_children.size() > 1)
         {
@@ -952,6 +1029,15 @@ HRESULT CIsochartMesh::TryMergeChart(
     {
         for (size_t i = 0; i < pChart2->m_adjacentChart.size(); i++)
         {
+            if (((i + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+            {
+                if (FAILED(hr = callbackSchemer.CheckPointAdapt()))
+                {
+                    delete pMainChart;
+                    return hr;
+                }
+            }
+
             if (children[pChart2->m_adjacentChart[i]] != pChart1)
             {
                 adjacentChartList.push_back(pChart2->m_adjacentChart[i]);
@@ -966,6 +1052,15 @@ HRESULT CIsochartMesh::TryMergeChart(
 
     for (size_t i = 0; i < pChart1->m_adjacentChart.size(); i++)
     {
+        if (((i + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+        {
+            if (FAILED(hr = callbackSchemer.CheckPointAdapt()))
+            {
+                delete pMainChart;
+                return hr;
+            }
+        }
+
         if (children[pChart1->m_adjacentChart[i]] != pChart2)
         {
             if (!addNoduplicateItem(adjacentChartList,

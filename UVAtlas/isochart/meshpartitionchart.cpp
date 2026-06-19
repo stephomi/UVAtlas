@@ -13,6 +13,11 @@
 using namespace Isochart;
 using namespace DirectX;
 
+namespace
+{
+    constexpr size_t CALLBACK_CHECK_INTERVAL = 1024;
+}
+
 /////////////////////////////////////////////////////////////
 ////////////////////Common Patition Methods//////////////////
 /////////////////////////////////////////////////////////////
@@ -21,6 +26,7 @@ HRESULT CIsochartMesh::GenerateAllSubCharts(
     size_t dwMaxSubchartCount,
     bool &bAllManifold)
 {
+    HRESULT hr = S_OK;
     bAllManifold = true;
 
     if (dwMaxSubchartCount < 2)
@@ -46,6 +52,11 @@ HRESULT CIsochartMesh::GenerateAllSubCharts(
     {
         for (uint32_t i = 0; i < m_dwFaceNumber; i++)
         {
+            if (((i + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+            {
+                FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+            }
+
             assert(pdwFaceChartID[i] < dwMaxSubchartCount);
             pChartFaceList[pdwFaceChartID[i]].push_back(i);
         }
@@ -77,6 +88,11 @@ HRESULT CIsochartMesh::GenerateAllSubCharts(
     // 2. Generate sub-charts.
     for (size_t i = 0; i < dwMaxSubchartCount; i++)
     {
+        if (((i + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+        {
+            FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+        }
+
         if (pChartFaceList[i].empty())
         {
             continue;
@@ -147,6 +163,8 @@ HRESULT CIsochartMesh::GetAllVerticesInSubChart(
     const std::vector<uint32_t> &faceList,
     VERTEX_ARRAY &subChartVertList)
 {
+    HRESULT hr = S_OK;
+
     std::unique_ptr<bool[]> isVertInNewChart(new (std::nothrow) bool[m_dwVertNumber]);
     if (!isVertInNewChart)
     {
@@ -160,6 +178,11 @@ HRESULT CIsochartMesh::GetAllVerticesInSubChart(
     size_t dwVertCountInNewChart = 0;
     for (size_t i = 0; i < faceList.size(); i++)
     {
+        if (((i + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+        {
+            FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+        }
+
         ISOCHARTFACE *pFace = m_pFaces + faceList[i];
         for (size_t j = 0; j < 3; j++)
         {
@@ -177,6 +200,11 @@ HRESULT CIsochartMesh::GetAllVerticesInSubChart(
 
         for (size_t i = 0; i < m_dwVertNumber; i++)
         {
+            if (((i + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+            {
+                FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+            }
+
             if (pbIsVertInNewChart[i])
             {
                 subChartVertList.push_back(m_pVerts + i);
@@ -210,6 +238,8 @@ HRESULT CIsochartMesh::SmoothPartitionResult(
     uint32_t *pdwFaceChartID,
     bool &bIsOptimized)
 {
+    HRESULT hr = S_OK;
+
     assert(dwMaxSubchartCount > 0);
 
 #ifdef _DEBUG
@@ -241,6 +271,11 @@ HRESULT CIsochartMesh::SmoothPartitionResult(
     }
     for (size_t i = 0; i < m_dwFaceNumber; i++)
     {
+        if (((i + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+        {
+            FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+        }
+
         assert(pdwFaceChartID[i] < dwMaxSubchartCount);
         _Analysis_assume_(pdwFaceChartID[i] < dwMaxSubchartCount);
         // Count the face number of each new chart
@@ -269,6 +304,11 @@ HRESULT CIsochartMesh::SmoothPartitionResult(
         }
         for (uint32_t i = 0; i < m_dwFaceNumber; i++)
         {
+            if (((i + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+            {
+                FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+            }
+
             pFaceGroup[pdwFaceChartID[i]].push_back(i);
         }
     }
@@ -280,11 +320,18 @@ HRESULT CIsochartMesh::SmoothPartitionResult(
     // 3. Optimize partition
     while (!heap.empty())
     {
+        FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+
         auto pTop = heap.cutTop();
         assert(pTop != nullptr && (pTop->m_weight <= 0));
 
         for (size_t j = 0; j < pFaceGroup[pTop->m_data].size(); j++)
         {
+            if (((j + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+            {
+                FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+            }
+
             uint32_t dwFaceID = pFaceGroup[pTop->m_data][j];
             ISOCHARTFACE *pFace = m_pFaces + dwFaceID;
 
@@ -438,6 +485,11 @@ HRESULT CIsochartMesh::AdjustToSameChartID(
     // 1. Find all different sub chart id
     for (size_t ii = 0; ii < dwCongFaceCount; ii++)
     {
+        if (((ii + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+        {
+            FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+        }
+
         if (!addNoduplicateItem(allDiffSubChartIDList,
             pdwFaceChartID[pdwCongFaceID[ii]]))
         {
@@ -461,6 +513,11 @@ HRESULT CIsochartMesh::AdjustToSameChartID(
     memset(subChartIDCountList.data(), 0, sizeof(uint32_t) * subChartIDCountList.size());
     for (size_t ii = 0; ii < dwCongFaceCount; ii++)
     {
+        if (((ii + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+        {
+            FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+        }
+
         for (size_t jj = 0; jj < allDiffSubChartIDList.size(); jj++)
         {
             if (pdwFaceChartID[pdwCongFaceID[ii]] == allDiffSubChartIDList[jj])
@@ -489,6 +546,11 @@ HRESULT CIsochartMesh::AdjustToSameChartID(
     // 3. Set new sub chart id
     for (size_t ii = 0; ii < dwCongFaceCount; ii++)
     {
+        if (((ii + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+        {
+            FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+        }
+
         pdwFaceChartID[pdwCongFaceID[ii]] = dwTargetSubChartID;
     }
 
@@ -501,6 +563,7 @@ HRESULT CIsochartMesh::FindCongenerFaces(
     std::vector<uint32_t> &congenerFaceCategoryLen,
     bool &bHasFalseEdge)
 {
+    HRESULT hr = S_OK;
     bHasFalseEdge = false;
 
     // 1. Find all false faces. (face having false edge.)
@@ -514,6 +577,11 @@ HRESULT CIsochartMesh::FindCongenerFaces(
 
     for (size_t ii = 0; ii < m_dwEdgeNumber; ii++)
     {
+        if (((ii + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+        {
+            FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+        }
+
         ISOCHARTEDGE &edge = m_edges[ii];
 
         if (!edge.bCanBeSplit)
@@ -550,6 +618,11 @@ HRESULT CIsochartMesh::FindCongenerFaces(
     {
         for (uint32_t ii = 0; ii < m_dwFaceNumber; ii++)
         {
+            if (((ii + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+            {
+                FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+            }
+
             if (!bFalseFace[ii] || bProcessedFace[ii])
             {
                 continue;
@@ -563,6 +636,11 @@ HRESULT CIsochartMesh::FindCongenerFaces(
             size_t dwCur = dwBegin;
             do
             {
+                if (((dwCur - dwBegin + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+                {
+                    FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+                }
+
                 uint32_t dwCurrentFace = congenerFaceCategories[dwCur];
                 ISOCHARTFACE &face = m_pFaces[dwCurrentFace];
 
@@ -661,6 +739,11 @@ HRESULT CIsochartMesh::SatifyUserSpecifiedRule(
     bIsSatifiedUserRule = false;
     for (size_t ii = 1; ii < m_dwFaceNumber; ii++)
     {
+        if (((ii + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+        {
+            FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+        }
+
         if (dwSubChartID != pdwFaceChartID[ii])
         {
             bIsSatifiedUserRule = true;
@@ -689,6 +772,11 @@ HRESULT CIsochartMesh::SatifyUserSpecifiedRule(
 
             for (size_t ii = 0; ii < congenerFaceCategoryLen[0]; ii++)
             {
+                if (((ii + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+                {
+                    FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+                }
+
                 pdwFaceChartID[congenerFaceCategories[ii]] = targetID;
             }
             bIsSatifiedUserRule = true;
@@ -719,6 +807,11 @@ HRESULT CIsochartMesh::SatifyManifoldRule(
 
         for (size_t i = 0; i < m_dwVertNumber; i++)
         {
+            if (((i + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+            {
+                FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+            }
+
             assert(pVertex->dwID == i);
 
             bool bIsModifiedCurOperation = false;
@@ -2421,6 +2514,8 @@ HRESULT CIsochartMesh::PartitionGeneralShape(
     const bool bOptSubBoundaryByAngle,
     bool &bIsPartitionSucceed)
 {
+    HRESULT hr = S_OK;
+
     DPF(3, "Partition General shape...\n");
     bIsPartitionSucceed = false;
 
@@ -2438,15 +2533,15 @@ HRESULT CIsochartMesh::PartitionGeneralShape(
 
     // 1. Partition the chart into representativeVertsIdx.size()
     // parts by growing charts simultaneously around the representatives
-    ClusterFacesByParameterDistance(
+    FAILURE_RETURN(ClusterFacesByParameterDistance(
         pdwFaceChartID.get(),
         pfVertCombineDistance,
-        representativeVertsIdx);
+        representativeVertsIdx));
 
     // 2.Smooth parititon result
     size_t dwMaxSubchartCount = representativeVertsIdx.size();
 
-    HRESULT hr = SmoothPartitionResult(
+    hr = SmoothPartitionResult(
         dwMaxSubchartCount,
         pdwFaceChartID.get(),
         bIsPartitionSucceed);
@@ -2502,14 +2597,20 @@ HRESULT CIsochartMesh::PartitionGeneralShape(
         bIsPartitionSucceed);
 }
 
-void CIsochartMesh::ClusterFacesByParameterDistance(
+HRESULT CIsochartMesh::ClusterFacesByParameterDistance(
     uint32_t *pdwFaceChartID,
     const float *pfVertParitionDistance,
     std::vector<uint32_t> &representativeVertsIdx)
 {
+    HRESULT hr = S_OK;
     ISOCHARTFACE *pFace = m_pFaces;
     for (size_t i = 0; i < m_dwFaceNumber; i++)
     {
+        if (((i + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+        {
+            FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+        }
+
         float fMinDistance = FLT_MAX;
         pdwFaceChartID[i] = INVALID_INDEX;
 
@@ -2527,6 +2628,8 @@ void CIsochartMesh::ClusterFacesByParameterDistance(
         assert(pdwFaceChartID[i] != INVALID_INDEX);
         pFace++;
     }
+
+    return S_OK;
 }
 
 // For each face, creat a sub-chart.
@@ -2556,6 +2659,11 @@ HRESULT CIsochartMesh::PartitionEachFace()
 
     for (uint32_t i = 0; i < m_dwFaceNumber; i++)
     {
+        if (((i + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+        {
+            FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+        }
+
         chartFaceList[0] = i;
         hr = BuildSubChart(chartFaceList, bMainfold);
         assert(bMainfold);
@@ -2575,6 +2683,8 @@ HRESULT CIsochartMesh::BiPartitionParameterlizeShape(
     const float *pfVertCombineDistance,
     std::vector<uint32_t> &representativeVertsIdx)
 {
+    HRESULT hr = S_OK;
+
     std::unique_ptr<uint32_t[]> pdwFaceChartID(new (std::nothrow) uint32_t[m_dwFaceNumber]);
     if (!pdwFaceChartID)
     {
@@ -2582,16 +2692,16 @@ HRESULT CIsochartMesh::BiPartitionParameterlizeShape(
     }
 
     // 1. Cluster faces to initialize partition
-    ClusterFacesByParameterDistance(
+    FAILURE_RETURN(ClusterFacesByParameterDistance(
         pdwFaceChartID.get(),
         pfVertCombineDistance,
-        representativeVertsIdx);
+        representativeVertsIdx));
 
     // 2. Optimize partition
     bool bIsOptimized;
     size_t dwMaxSubchartCount = 2;
 
-    HRESULT hr = SmoothPartitionResult(
+    hr = SmoothPartitionResult(
         dwMaxSubchartCount,
         pdwFaceChartID.get(),
         bIsOptimized);
@@ -2622,9 +2732,19 @@ HRESULT CIsochartMesh::BiPartitionParameterlizeShape(
     {
         for (size_t i = 0; i < m_children.size(); i++)
         {
+            if (((i + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+            {
+                FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+            }
+
             ISOCHARTFACE *pFace = m_children[i]->m_pFaces;
             for (size_t j = 0; j < m_children[i]->m_dwFaceNumber; j++)
             {
+                if (((j + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+                {
+                    FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+                }
+
                 pdwFaceChartID[pFace->dwIDInFatherMesh] = static_cast<uint32_t>(i);
                 pFace++;
             }
@@ -2653,6 +2773,11 @@ HRESULT CIsochartMesh::BiPartitionParameterlizeShape(
     // 5. Using old parameterlization value
     for (size_t ii = 0; ii < m_children.size(); ii++)
     {
+        if (((ii + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+        {
+            FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+        }
+
         CIsochartMesh *pSubChart = m_children[ii];
         assert(pSubChart != nullptr);
 
@@ -2660,6 +2785,11 @@ HRESULT CIsochartMesh::BiPartitionParameterlizeShape(
         ISOCHARTVERTEX *pOldVertex;
         for (size_t jj = 0; jj < pSubChart->m_dwVertNumber; jj++)
         {
+            if (((jj + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+            {
+                FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+            }
+
             pOldVertex = m_pVerts + pNewVertex->dwIDInFatherMesh;
             pNewVertex->uv = pOldVertex->uv;
             pNewVertex++;
@@ -2714,10 +2844,17 @@ HRESULT CIsochartMesh::FindWatershed(
     EDGE_ARRAY &internalEdgeList,
     EDGE_ARRAY &marginalEdgeList)
 {
+    HRESULT hr = S_OK;
+
     try
     {
         for (size_t ii = 0; ii < m_dwEdgeNumber; ii++)
         {
+            if (((ii + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+            {
+                FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+            }
+
             ISOCHARTEDGE &edge = m_edges[ii];
             if (edge.bIsBoundary)
             {
@@ -2759,6 +2896,12 @@ HRESULT CIsochartMesh::GetMaxLengthCutPathsInWatershed(
 
     while (!marginalEdgeList.empty())
     {
+        hr = m_callbackSchemer.CheckPointAdapt();
+        if (FAILED(hr))
+        {
+            goto LEnd;
+        }
+
         ISOCHARTEDGE *pStartEdge = marginalEdgeList[0];
 
         marginalEdgeList.erase(marginalEdgeList.begin());
@@ -2805,6 +2948,12 @@ HRESULT CIsochartMesh::GetMaxLengthCutPathsInWatershed(
 
             while (dwEndVertexID == INVALID_VERT_ID && !(marginalEdgeList.empty() && internalEdgeList.empty()))
             {
+                hr = m_callbackSchemer.CheckPointAdapt();
+                if (FAILED(hr))
+                {
+                    goto LEnd;
+                }
+
                 ISOCHARTEDGE *pEndEdge = nullptr;
 
                 for (size_t ii = 0; ii < marginalEdgeList.size(); ii++)
@@ -2897,6 +3046,8 @@ HRESULT CIsochartMesh::GrowPartitionFromCutPath(
     EDGE_ARRAY &cutPath,
     uint32_t *pdwFaceChartID)
 {
+    HRESULT hr = S_OK;
+
     std::unique_ptr<bool[]> bMask(new (std::nothrow) bool[m_dwFaceNumber]);
     if (!bMask)
     {
@@ -2909,6 +3060,11 @@ HRESULT CIsochartMesh::GrowPartitionFromCutPath(
         std::queue<uint32_t> faceQueue;
         for (size_t ii = 0; ii < cutPath.size(); ii++)
         {
+            if (((ii + 1) % CALLBACK_CHECK_INTERVAL) == 0)
+            {
+                FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+            }
+
             ISOCHARTEDGE *pEdge = cutPath[ii];
             bMask[pEdge->dwFaceID[0]] = true;
             bMask[pEdge->dwFaceID[1]] = true;
@@ -2916,8 +3072,14 @@ HRESULT CIsochartMesh::GrowPartitionFromCutPath(
             faceQueue.push(pEdge->dwFaceID[1]);
         }
 
+        size_t dwProcessedFaceCount = 0;
         while (!faceQueue.empty())
         {
+            if (((++dwProcessedFaceCount) % CALLBACK_CHECK_INTERVAL) == 0)
+            {
+                FAILURE_RETURN(m_callbackSchemer.CheckPointAdapt());
+            }
+
             uint32_t dwFaceID = faceQueue.front();
             faceQueue.pop();
             ISOCHARTFACE &face = m_pFaces[dwFaceID];
